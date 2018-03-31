@@ -11,7 +11,7 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite}
 @RunWith(classOf[JUnitRunner])
 class TestAggregator extends FunSuite with BeforeAndAfterAll {
   //reading a sample file with 30 rows, 3 users with 10 transactions each
-  lazy val sut = new Aggregator("/home/gatling77/dev/mldemo/dataggregator/src/test/resources/data.csv")
+  lazy val sut = new Aggregator("/home/gatling77/dev/mldemo/dataggregator/src/test/resources/small_dataset.csv",Aggregator.sc)
 
   test("SUT can be instantiated"){
     val instantiated = try {
