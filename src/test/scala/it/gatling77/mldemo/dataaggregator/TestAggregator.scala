@@ -25,7 +25,7 @@ class TestAggregator extends FunSuite with BeforeAndAfterAll {
 
   test("read raw data reads the expected number of lines"){
     val lines = sut.readRawData()
-    assert(lines.count()==30)
+    assert(lines.count()==31)
   }
 
   test("transform raw data to transactions"){

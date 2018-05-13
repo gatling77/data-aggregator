@@ -16,23 +16,37 @@ case class UserStats(userId:Int, transactionsPerDay: Double, averageAmount: Doub
     geographicDispersion.toString
   }
 }
-
+//Old, Spark 1.0 style code... for more modern stuff, see ML demo.
 object Aggregator{
   lazy val sparkConf: SparkConf = new SparkConf().setMaster("local").setAppName("Data-aggregator")
   lazy val sc = new SparkContext(sparkConf)
 
     def main(args: Array[String]): Unit = {
-      val file = "/home/gatling77/dev/mldemo/dataggregator/src/main/resources/large_dataset.csv" //replace with arg
-      val out = "/home/gatling77/dev/mldemo/mlpipeline/src/main/resources/large_dataset.csv"
-      val aggregator = new Aggregator(file,sc)
+
+      if (args.length < 2){
+        throw new IllegalArgumentException("too few parameters")
+      }
+
+      val in = args(0) //replace with arg
+      val out = args(1)
+
+      val file = new File(out)
+      if (!file.exists()){
+        file.createNewFile()
+      }
+
+
+      val aggregator = new Aggregator(in,sc)
       val stats = aggregator.aggregate()
-      val w:PrintWriter =  new PrintWriter(new File(out))
+
+      val w:PrintWriter =  new PrintWriter(file)
 
       try {
         w.println("userId,transactionsPerDay,averageAmount,numberOfMerchant,numberOfPresentationMode,geographicDispersion")
         stats.collect().foreach(u=>w.println(u.toCSV))
       } finally{
         w.close()
+        sc.cancelAllJobs()
       }
     }
 
@@ -45,9 +59,14 @@ class Aggregator(file: String, sc:SparkContext) extends Serializable{
 
   def aggregate():RDD[UserStats]={
     val raw = readRawData()
+    println("Raw data read")
     val transaction = toTransactions(raw)
+    println("Transaction read")
     val onlyValid = excludeFraud(transaction)
-    userStats(onlyValid)
+    println("Fraud excluded")
+    val us = userStats(onlyValid)
+    println("user stats calculated")
+    us
   }
 
   def readRawData():RDD[String] = {
@@ -55,8 +74,9 @@ class Aggregator(file: String, sc:SparkContext) extends Serializable{
   }
 
 
-  def toTransactions(lines: RDD[String]): RDD[Transaction] =
-    lines.map(line=>{
+  def toTransactions(lines: RDD[String]): RDD[Transaction] ={
+    val header = lines.first()
+    lines.filter(l=>l!=header).map(line=>{
         val data = line.split(",")
         Transaction(
           data(0).toInt,
@@ -70,6 +90,9 @@ class Aggregator(file: String, sc:SparkContext) extends Serializable{
         )
       }
     )
+  }
+
+
 
   def excludeFraud(transactions: RDD[Transaction]): RDD[Transaction] ={
     transactions.filter(t  => !t.isFraud)
